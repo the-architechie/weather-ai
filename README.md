@@ -18,7 +18,6 @@ The idea behind this solution is to leverage the Weather AI APIs to give custome
 - Simply chat with the bot in WhatsApp
 - The bot will guide you through the process of getting started
 - The bot will provide you with weather insights and crop insights(if any)
-- 
 A user can interact with the bot in 4 distinct ways. They can send:
 
 - A greeting
