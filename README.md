@@ -24,8 +24,10 @@ A user can interact with the bot in 4 distinct ways. They can send:
 - A name of a city
 - A pin location
 - A picture of their crop
-- Greeting
+
+#### Greeting
 The bot detects the user's greeting (e.g., hi, hello) and triggers the Welcome flow. This flow guides the user through the process of getting started, explaining exactly what they need to provide to get meaningful weather or crop insights.
+<img width="981" height="397" alt="Screenshot 2026-06-05 at 17 01 52" src="https://github.com/user-attachments/assets/a3593d65-3998-495d-8e4d-46a4310e6a82" />
 
 #### City Name
 When a user sends the name of a city, the workflow leverages the free Open-Meteo Geocoding API to resolve the city name into exact coordinates. These coordinates are then passed to the Weather AI API. In return, the user receives a summary of the current weather and a prediction for the next 2 days.
@@ -43,6 +45,7 @@ Weather at your location
   Pin Location
 ```
 <img width="998" height="752" alt="Screenshot 2026-06-05 at 16 55 57" src="https://github.com/user-attachments/assets/c29d5a4c-5f44-44f9-8303-71af473ed9bf" />
+
 
 #### Pin Location
   When a user sends a live or static pin location, the webhook payload extracts the exact coordinates of the pin and passes them directly to the Weather AI API.
