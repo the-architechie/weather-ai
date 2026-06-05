@@ -29,6 +29,7 @@ The bot detects the user's greeting (e.g., hi, hello) and triggers the Welcome f
 
 #### City Name
 When a user sends the name of a city, the workflow leverages the free Open-Meteo Geocoding API to resolve the city name into exact coordinates. These coordinates are then passed to the Weather AI API. In return, the user receives a summary of the current weather and a prediction for the next 2 days.
+
 Example response:
 ```json
 Weather at your location 
@@ -41,6 +42,7 @@ Weather at your location
 * Sun, Jun 7: 16°C - 25°C | Light drizzle 🌦️ (Rain: 35%)
   Pin Location
 ```
+<img width="998" height="752" alt="Screenshot 2026-06-05 at 16 55 57" src="https://github.com/user-attachments/assets/c29d5a4c-5f44-44f9-8303-71af473ed9bf" />
 #### Pin Location
   When a user sends a live or static pin location, the webhook payload extracts the exact coordinates of the pin and passes them directly to the Weather AI API.
 Example response:
