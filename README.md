@@ -43,6 +43,7 @@ Weather at your location
   Pin Location
 ```
 <img width="998" height="752" alt="Screenshot 2026-06-05 at 16 55 57" src="https://github.com/user-attachments/assets/c29d5a4c-5f44-44f9-8303-71af473ed9bf" />
+
 #### Pin Location
   When a user sends a live or static pin location, the webhook payload extracts the exact coordinates of the pin and passes them directly to the Weather AI API.
 Example response:
@@ -56,6 +57,8 @@ Weather at your location 📍
 * Sat, Jun 6: 15°C - 24°C | Light drizzle 🌦️ (Rain: 45%)
 * Sun, Jun 7: 13°C - 23°C | Light drizzle 🌦️ (Rain: 35%)
 ```
+<img width="1012" height="420" alt="Screenshot 2026-06-05 at 16 56 38" src="https://github.com/user-attachments/assets/e0792408-b3ec-46ec-9a7a-779f6ef7eca5" />
+
 #### Media (Tree Analysis)
   When a user sends a picture of their crop, the bot automatically downloads the binary file from the WAHA server. It then extracts the user's caption from the Webhook payload and POSTs it alongside the image to the Tree Analysis API. The user's original caption is dynamically injected back into the final response for a conversational experience.
 
@@ -65,3 +68,5 @@ _You asked: "Are these brown spots dangerous?"_
 We couldn't identify any trees clearly from the image you provided. This can happen if the photo is blurry, taken from far away, or doesn't show trees prominently.
 Tip: Try taking a clearer photo of your trees from a closer angle, and make sure the area is well-lit.
 ```
+<img width="959" height="568" alt="Screenshot 2026-06-05 at 16 57 52" src="https://github.com/user-attachments/assets/4f9dcbdc-e36d-44c5-b1f7-64c3bcaf7cc8" />
+
