@@ -14,7 +14,6 @@ The idea behind this solution is to leverage the Weather AI APIs to give custome
 
 ## Languages Used
 - JavaScript
-- 
 ## How to Interact with the solution
 - Simply chat with the bot in WhatsApp
 - The bot will guide you through the process of getting started
