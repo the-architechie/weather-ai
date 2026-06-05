@@ -1,0 +1,1047 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const welcomeText = `👋 *Welcome to WeatherAI Bot!*\\n\\nHere's what I can do for you:\\n\\n🌤 *Get weather by city*\\nJust type a city name e.g. _Nairobi_, _Mombasa_, _Kisumu_\\n\\n📍 *Get weather for your current location*\\n*Android:* Tap the attachment icon → Location → Send current location\\n*iPhone:* Tap the + icon → Location\\n\\n🌳 *Analyse your farm trees*\\nSend a photo of your farm and I'll analyse tree health and canopy coverage.\\n\\n---\\n_Powered by WeatherAI_`;\n\nreturn [{ json: { message: welcomeText, chatId: $json.chatId, session: $json.session } }];"
+      },
+      "id": "27ad1b15-3049-42d4-ade3-db2f6b8131ff",
+      "name": "Build welcome message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        8016
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const w = $input.first().json;\nconst sessionGate = $('Session gate1').first().json;\nconst chatId = sessionGate.chatId;\nconst session = sessionGate.session;\n\n// Safely extract the main object in case it's wrapped in an array\nlet weatherData = w;\nif (!w.current && Array.isArray(w) && w.length > 0 && w[0].current) {\n    weatherData = w[0];\n}\n\nif (!weatherData.current) {\n  return [{ json: { message: `Sorry, I couldn't find weather for that location.`, chatId, session } }];\n}\n\nconst temp = weatherData.current?.temperature ? Math.round(weatherData.current.temperature) : 'N/A';\nconst conditionCode = String(weatherData.current?.condition_code || '');\n\n// Expanded WMO Condition Codes with emojis\nconst conditionMap = {\n  '0': 'Clear sky ☀️', '1': 'Mainly clear 🌤', '2': 'Partly cloudy ⛅️', '3': 'Overcast ☁️',\n  '45': 'Fog 🌫', '48': 'Depositing rime fog 🌫',\n  '51': 'Light drizzle 🌦', '53': 'Moderate drizzle 🌧', '55': 'Dense drizzle 🌧',\n  '56': 'Light freezing drizzle 🌧❄️', '57': 'Dense freezing drizzle 🌧❄️',\n  '61': 'Slight rain 🌧', '63': 'Moderate rain 🌧', '65': 'Heavy rain 🌧',\n  '66': 'Light freezing rain 🌧❄️', '67': 'Heavy freezing rain 🌧❄️',\n  '71': 'Slight snow 🌨', '73': 'Moderate snow 🌨', '75': 'Heavy snow ❄️',\n  '77': 'Snow grains ❄️',\n  '80': 'Light rain showers 🌦', '81': 'Moderate rain showers 🌧', '82': 'Violent rain showers ⛈',\n  '85': 'Slight snow showers 🌨', '86': 'Heavy snow showers ❄️',\n  '95': 'Thunderstorm ⛈', '96': 'Thunderstorm, slight hail ⛈❄️', '99': 'Thunderstorm, heavy hail ⛈❄️'\n};\n\nconst conditionDesc = conditionMap[conditionCode] || conditionCode || 'Unknown';\n\n// Safely determine if this was a geocoded query to add the city name\nlet cityNameStr = '';\ntry {\n  // If this came from the Live Location branch, accessing $('Check Geocode1') throws an error.\n  // The try/catch block ensures it fails silently and gracefully for Live Location!\n  const geoResults = $('Check Geocode1').first()?.json?.results;\n  if (geoResults && geoResults.length > 0) {\n    cityNameStr = ` for ${geoResults[0].name}`;\n  }\n} catch (error) {\n  // Node did not execute, so this was a Live Location query! (Do nothing)\n}\n\nlet message = `*Weather at your location${cityNameStr}* 📍\\n\\n`;\nmessage += `🌡 *Currently:* ${temp}°C\\n`;\nmessage += `🌤 *Conditions:* ${conditionDesc}\\n`;\n\nif (weatherData.current?.wind_speed) {\n    message += `💨 *Wind:* ${weatherData.current.wind_speed} km/h\\n`;\n}\nmessage += `\\n`;\n\n// AI Summary\nconst aiSummary = weatherData.ai_summary || '';\nif (aiSummary) message += `💡 _${aiSummary}_\\n\\n`;\n\n// Daily Forecast (Next 3 days)\nlet dailyData = weatherData.daily || weatherData.forecast || weatherData.forecasts;\nif (!dailyData && Array.isArray(w) && w.length > 0 && w[0].date) dailyData = w;\nelse if (!dailyData && Array.isArray(weatherData) && weatherData[0] && weatherData[0].date) dailyData = weatherData;\nelse if (!dailyData && Array.isArray(w) && Array.isArray(w[0])) dailyData = w[0];\n\nif (dailyData && Array.isArray(dailyData) && dailyData.length > 0) {\n    message += `*📅 Forecast:*\\n`;\n    const forecastDays = dailyData.slice(0, 3); // Grab up to the next 3 days\n    \n    forecastDays.forEach(day => {\n        if (!day.date) return;\n        const dateObj = new Date(day.date);\n        const dayStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });\n        \n        const dMin = Math.round(day.temp_min);\n        const dMax = Math.round(day.temp_max);\n        const dCode = String(day.condition_code || '');\n        const dCond = conditionMap[dCode] || dCode;\n        const dRainProb = day.precipitation_probability ? `${day.precipitation_probability}%` : '0%';\n        \n        message += `• *${dayStr}*: ${dMin}°C - ${dMax}°C | ${dCond} (Rain: ${dRainProb})\\n`;\n    });\n}\n\nreturn [{ json: { message, chatId, session } }];"
+      },
+      "id": "e4599139-744d-4a34-b5ff-65e1738a1ee9",
+      "name": "Format Weather Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        7824
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\nconst sessionGate = $('Session gate1').first().json;\nconst chatId = sessionGate.chatId;\nconst session = sessionGate.session;\n\n// Helper to safely get values\nconst totalTrees = res.total_tree_count ?? 0;\nconst landAcres = res.land_acres ?? null;\nconst confidence = res.confidence_score ?? 0;\nconst lowConfidence = res.low_confidence === true;\nconst health = res.tree_health || { healthy: 0, needs_care: 0, needs_replacement: 0 };\nconst observations = Array.isArray(res.observations) ? res.observations : [];\nconst recommendations = Array.isArray(res.recommendations) ? res.recommendations : [];\n\n// Start building the message\nlet message = \"🌳 *Tree Analysis Results*\\n\\n\";\n\n// Case: no trees detected or very low confidence\nif (totalTrees === 0 || lowConfidence) {\n  message += \"We couldn't identify any trees clearly from the image you provided. \";\n  message += \"This can happen if the photo is blurry, taken from far away, or doesn't show trees prominently.\\n\\n\";\n  message += \"📸 *Tip:* Try taking a clearer photo of your trees from a closer angle, and make sure the area is well-lit.\\n\\n\";\n  if (res.gemini_error) {\n    // Mask internal error – don't expose API key issues\n    message += \"_Note: Our analysis service is temporarily limited. We're working to improve it._\";\n  }\n} else {\n  // Normal analysis with detected trees\n  message += `📊 *Detected:* ${totalTrees} tree${totalTrees !== 1 ? 's' : ''}`;\n  if (landAcres) {\n    const density = (totalTrees / landAcres).toFixed(1);\n    message += ` on ${landAcres} acre${landAcres !== 1 ? 's' : ''} (≈ ${density} trees/acre)`;\n  }\n  message += \"\\n\\n\";\n\n  // Tree health summary\n  const healthy = health.healthy || 0;\n  const needsCare = health.needs_care || 0;\n  const needsReplace = health.needs_replacement || 0;\n  message += \"🌿 *Health status:*\\n\";\n  message += `✅ Healthy: ${healthy}\\n`;\n  message += `⚠️ Needs care: ${needsCare}\\n`;\n  message += `🔄 Needs replacement: ${needsReplace}\\n\\n`;\n\n  // Observations (if any)\n  if (observations.length > 0) {\n    message += \"🔍 *Observations:*\\n\";\n    observations.forEach(obs => { message += `• ${obs}\\n`; });\n    message += \"\\n\";\n  }\n\n  // Recommendations (if any)\n  if (recommendations.length > 0) {\n    message += \"💡 *Recommendations:*\\n\";\n    recommendations.forEach(rec => { message += `• ${rec}\\n`; });\n    message += \"\\n\";\n  }\n\n  // Confidence note\n  if (confidence < 0.7) {\n    message += `⚠️ *Low confidence analysis* (${Math.round(confidence*100)}%). For best results, use a clear, well-lit photo taken closer to the trees.`;\n  }\n}\n\n// Return formatted message\nreturn [{ json: { message, chatId, session } }];"
+      },
+      "id": "2c9bb25e-6a60-41fd-acb1-d52b140f7397",
+      "name": "Format Tree Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        8352
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "=default",
+        "chatId": "={{ $('Prepare Message').first().json.chatId }}",
+        "text": "={{ $('Prepare Message').first().json.message }}",
+        "requestOptions": {}
+      },
+      "id": "93fc323e-3632-4897-b3d2-6c5fbda5d84a",
+      "name": "Send text message",
+      "type": "n8n-nodes-Whatsapp",
+      "typeVersion": 202411,
+      "position": [
+        576,
+        7920
+      ],
+      "credentials": {
+        "whatsappApi": {
+          "id": "MwIskzfsTexgUKUK",
+          "name": "Whatsapp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3bfe08a2-a18c-4131-9f12-adec001fcd5b",
+      "name": "Whatsapp Webhook1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1440,
+        8160
+      ],
+      "webhookId": "Whatsapp-webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {}
+      },
+      "id": "ad72f006-f085-4edf-ad69-774eda037c8f",
+      "name": "Respond to whatsapp1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        -1216,
+        8256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $json.body?.payload || {};\n\n// Ignore messages sent by the bot itself (prevents loops)\nif (payload.fromMe === true) {\n  return [];\n}\n\nconst text = (payload.body || '').trim();\nconst textLower = text.toLowerCase();\n\nconst hasLocation = !!payload.location;\nconst hasMedia = !!payload.media;\n\n// Common greetings\nconst greetings = ['hi', 'hello', 'hey', 'start', 'menu', 'jambo', 'niaje'];\nconst isWelcome = greetings.includes(textLower);\n\nlet action = 'send_help';\n\nif (hasLocation) {\n  action = 'location';\n} else if (hasMedia) {\n  action = 'image';\n} else if (isWelcome) {\n  action = 'welcome';\n} else if (textLower === 'help') {\n  action = 'send_help';\n} else if (text) {\n  // If it's standard text but not a greeting, treat it as a text query (city)\n  action = 'text';\n}\n\nreturn [\n  {\n    json: {\n      action,\n      chatId: payload.from || null,\n      session: $json.body?.session || null,\n      payload,\n      originalWebhook: $json\n    }\n  }\n];"
+      },
+      "id": "1a55d419-3652-46b6-a8f7-436bb7780c75",
+      "name": "Session gate1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1216,
+        8064
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "welcome",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "welcome"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "location",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "location"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "send_help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "send_help"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "28fd072b-eff8-46e7-8f64-c487981f0c59",
+      "name": "Switch on action1",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -992,
+        8000
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const helpText = `🤖 *WeatherAI Bot – How to use me*\\n\\nTo get weather information, please share your current location:\\n📍 *Android*: Tap attachment icon → Location → Send current location\\n📍 *iPhone*: Tap + icon → Location\\n\\nTo analyze trees in your farm, send a photo of the farm.\\n\\nFor any other assistance, type *help*.\\n\\n_🌤 Powered by WeatherAI_`;\n\nreturn [{ json: { message: helpText, chatId: $json.chatId, session: $json.session } }];"
+      },
+      "id": "fd3d7e9e-1d15-45f6-a342-14a8dd8e971d",
+      "name": "Send Help Message1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        8544
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.weather-ai.co/v1/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "lat",
+              "value": "={{ $('Check Geocode1').first().json.results[0].latitude }}"
+            },
+            {
+              "name": "lon",
+              "value": "={{ $('Check Geocode1').first().json.results[0].longitude }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer wai_d0201c.27741a0f8fc2f73757bc6cb4f05393aec5e6f3bbdc611b5b"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3043a94f-845b-4e8a-87f2-03cc455b5dfd",
+      "name": "WeatherAI - Text Query1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -320,
+        7752
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.weather-ai.co/v1/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "lat",
+              "value": "={{ $('Session gate1').first().json.payload.location.latitude }}"
+            },
+            {
+              "name": "lon",
+              "value": "={{ $('Session gate1').first().json.payload.location.longitude }}"
+            },
+            {
+              "name": "ai",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer wai_d0201c.27741a0f8fc2f73757bc6cb4f05393aec5e6f3bbdc611b5b"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "25a0dda1-54bf-4e14-82af-cfffa09124f8",
+      "name": "WeatherAI - Live Location1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -320,
+        8064
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.weather-ai.co/v1/trees/analyze",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer wai_d0201c.27741a0f8fc2f73757bc6cb4f05393aec5e6f3bbdc611b5b"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "famerId",
+              "value": "F-001"
+            },
+            {
+              "name": "landAcres",
+              "value": "2.5"
+            },
+            {
+              "name": "notes",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2db9c2bb-1300-43a5-82f2-b5ac6e3fa6e5",
+      "name": "WeatherAI - Tree Analysis1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -320,
+        8352
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Stop Typing",
+        "session": "=default",
+        "chatId": "={{$('Prepare Message').first().json.chatId}}",
+        "requestOptions": {}
+      },
+      "id": "50a74a3f-3cd2-44f3-b10e-37de6d5ced55",
+      "name": "Stop Typing2",
+      "type": "n8n-nodes-Whatsapp",
+      "typeVersion": 202411,
+      "position": [
+        800,
+        7920
+      ],
+      "credentials": {
+        "whatsappApi": {
+          "id": "MwIskzfsTexgUKUK",
+          "name": "Whatsapp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Start Typing",
+        "session": "={{ $('Prepare Message').first().json.session }}",
+        "chatId": "={{ $('Prepare Message').first().json.chatId }}",
+        "requestOptions": {}
+      },
+      "id": "84000136-e3ee-4e2a-984d-63cd43390da6",
+      "name": "Start Typing",
+      "type": "n8n-nodes-Whatsapp",
+      "typeVersion": 202411,
+      "position": [
+        352,
+        7920
+      ],
+      "credentials": {
+        "whatsappApi": {
+          "id": "MwIskzfsTexgUKUK",
+          "name": "Whatsapp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "id": "645a7522-df62-418f-b444-8a70c58274f9",
+      "name": "Prepare Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        7920
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "87564d39-652a-4340-a1af-017e2bb1936e",
+              "leftValue": "={{ $json.results }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f42161e6-beb3-4b73-9dd3-abcc9371de9a",
+      "name": "Check Geocode1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        7632
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://geocoding-api.open-meteo.com/v1/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $('Session gate1').first().json.payload.body }}"
+            },
+            {
+              "name": "count",
+              "value": "1"
+            },
+            {
+              "name": "language",
+              "value": "en"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fd2d7689-b6dc-4a98-a5e2-16b29c0bed74",
+      "name": "Geocode City1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -768,
+        7632
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sessionGate = $('Session gate2').first().json;\nconst chatId = sessionGate.chatId;\nconst session = sessionGate.session;\nconst cityName = sessionGate.payload.body;\n\nreturn [{ json: { message: `❌ Sorry, I couldn't find the location: *${cityName}*\\n\\nPlease try a different city name or share your live location.`, chatId, session } }];"
+      },
+      "id": "2e709b04-cf24-4feb-859f-11f7aaa2bec5",
+      "name": "City Not Found1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        7584
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Session gate1').first().json.payload.media.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsappApi",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "aaa1b0d7-eb89-428a-b7ba-aaa8fd532621",
+      "name": "Download Image from whatsapp1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -544,
+        8352
+      ],
+      "credentials": {
+        "whatsappApi": {
+          "id": "MwIskzfsTexgUKUK",
+          "name": "Whatsapp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\nconst sessionGate = $('Session gate1').first().json;\nconst chatId = sessionGate.chatId;\nconst session = sessionGate.session;\n\n// Safely grab the caption from the Session gate payload\nconst caption = sessionGate.payload?.body || sessionGate.payload?._data?.caption || '';\n\nlet message = \"🌳 *Tree Analysis complete*\\n\\n\";\n\nif (caption && caption.trim() !== '') {\n    message += `_You asked: \"${caption.trim()}\"_\\n\\n`;\n}\n\nif (res.summary) {\n  message += res.summary;\n} else if (res.analysis) {\n  message += res.analysis;\n} else if (res.text) {\n  message += res.text;\n} else {\n  try {\n    message += JSON.stringify(res, null, 2);\n  } catch (e) {\n    message += \"Could not parse analysis results.\";\n  }\n}\n\nreturn [{ json: { message, chatId, session } }];"
+      },
+      "id": "1b438aa9-0385-4ad7-b1c4-34103fce32da",
+      "name": "Get Caption",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        8352
+      ]
+    }
+  ],
+  "connections": {
+    "Build welcome message": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Weather Message": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Tree Message": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send text message": {
+      "main": [
+        [
+          {
+            "node": "Stop Typing2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whatsapp Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Session gate1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to whatsapp1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session gate1": {
+      "main": [
+        [
+          {
+            "node": "Switch on action1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch on action1": {
+      "main": [
+        [
+          {
+            "node": "Build welcome message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Geocode City1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WeatherAI - Live Location1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Caption",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Help Message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Help Message1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WeatherAI - Text Query1": {
+      "main": [
+        [
+          {
+            "node": "Format Weather Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WeatherAI - Live Location1": {
+      "main": [
+        [
+          {
+            "node": "Format Weather Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WeatherAI - Tree Analysis1": {
+      "main": [
+        [
+          {
+            "node": "Format Tree Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Typing": {
+      "main": [
+        [
+          {
+            "node": "Send text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Message": {
+      "main": [
+        [
+          {
+            "node": "Start Typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Geocode1": {
+      "main": [
+        [
+          {
+            "node": "WeatherAI - Text Query1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "City Not Found1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode City1": {
+      "main": [
+        [
+          {
+            "node": "Check Geocode1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "City Not Found1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image from whatsapp1": {
+      "main": [
+        [
+          {
+            "node": "WeatherAI - Tree Analysis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Caption": {
+      "main": [
+        [
+          {
+            "node": "Download Image from whatsapp1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Whatsapp Webhook1": [
+      {
+        "headers": {
+          "host": "n8n.the-architechie.com",
+          "user-agent": "Whatsapp/2026.2.1",
+          "content-length": "3577",
+          "accept": "application/json, text/plain, */*",
+          "accept-encoding": "gzip, br",
+          "cdn-loop": "cloudflare; loops=1",
+          "cf-connecting-ip": "45.134.226.52",
+          "cf-ipcountry": "FR",
+          "cf-ray": "a06ee9441d62d2bb-FRA",
+          "cf-visitor": "{\"scheme\":\"https\"}",
+          "content-type": "application/json",
+          "x-forwarded-for": "172.71.164.129",
+          "x-forwarded-host": "n8n.the-architechie.com",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "84e0d6245f1b",
+          "x-real-ip": "172.71.164.129",
+          "x-webhook-request-id": "140t0151cmq0utjl6",
+          "x-webhook-timestamp": "1780659717734"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "id": "evt_01ktbse1k5jr7p71btqjyc7bbp",
+          "timestamp": 1780659717734,
+          "event": "message",
+          "session": "default",
+          "metadata": {},
+          "me": {
+            "id": "254700899091@c.us",
+            "pushName": "Muchami"
+          },
+          "payload": {
+            "id": "false_230390702850261@lid_AC54CFB1971D9EA7CB5AB277A2295DCC",
+            "timestamp": 1780659717,
+            "from": "230390702850261@lid",
+            "fromMe": false,
+            "source": "app",
+            "to": "254700899091@c.us",
+            "body": "Ohio",
+            "hasMedia": false,
+            "media": null,
+            "ack": 1,
+            "ackName": "SERVER",
+            "location": null,
+            "vCards": [],
+            "_data": {
+              "id": {
+                "fromMe": false,
+                "remote": "230390702850261@lid",
+                "id": "AC54CFB1971D9EA7CB5AB277A2295DCC",
+                "_serialized": "false_230390702850261@lid_AC54CFB1971D9EA7CB5AB277A2295DCC"
+              },
+              "viewed": false,
+              "body": "Ohio",
+              "type": "chat",
+              "t": 1780659717,
+              "clientReceivedTsMillis": 1780659716606,
+              "serverStoreTimeMicros": 1780659717491915,
+              "notifyName": "Mùchami",
+              "from": "230390702850261@lid",
+              "to": "254700899091@c.us",
+              "ack": 1,
+              "invis": false,
+              "isNewMsg": true,
+              "star": false,
+              "kicNotified": false,
+              "recvFresh": true,
+              "isFromTemplate": false,
+              "isAdsMedia": false,
+              "pollInvalidated": false,
+              "isSentCagPollCreation": false,
+              "latestEditMsgKey": null,
+              "latestEditSenderTimestampMs": null,
+              "mentionedJidList": [],
+              "groupMentions": [],
+              "isEventCanceled": false,
+              "eventInvalidated": false,
+              "isVcardOverMmsDocument": false,
+              "isForwarded": false,
+              "isQuestion": false,
+              "isSpoiler": false,
+              "questionReplyQuotedMessage": null,
+              "questionResponsesCount": 0,
+              "readQuestionResponsesCount": 0,
+              "forwardsCount": 0,
+              "hasReaction": false,
+              "newsletterAdminProfile": null,
+              "expiredTimestamp": null,
+              "viewMode": "VISIBLE",
+              "messageSecret": {
+                "0": 134,
+                "1": 93,
+                "2": 110,
+                "3": 103,
+                "4": 187,
+                "5": 91,
+                "6": 25,
+                "7": 226,
+                "8": 63,
+                "9": 201,
+                "10": 207,
+                "11": 193,
+                "12": 44,
+                "13": 136,
+                "14": 66,
+                "15": 174,
+                "16": 17,
+                "17": 155,
+                "18": 222,
+                "19": 33,
+                "20": 51,
+                "21": 84,
+                "22": 188,
+                "23": 189,
+                "24": 205,
+                "25": 76,
+                "26": 167,
+                "27": 42,
+                "28": 17,
+                "29": 204,
+                "30": 178,
+                "31": 25
+              },
+              "productHeaderImageRejected": false,
+              "lastPlaybackProgress": 0,
+              "isDynamicReplyButtonsMsg": false,
+              "isCarouselCard": false,
+              "parentMsgId": null,
+              "callSilenceReason": null,
+              "isVideoCall": false,
+              "callDuration": null,
+              "callCreator": null,
+              "callParticipants": null,
+              "isCallLink": null,
+              "callLinkToken": null,
+              "terminatedByDeviceSwitch": null,
+              "selfOtherDeviceConnected": null,
+              "bytesSent": null,
+              "bytesReceived": null,
+              "isMdHistoryMsg": false,
+              "stickerSentTs": 0,
+              "isAvatar": false,
+              "lastUpdateFromServerTs": 0,
+              "invokedBotWid": null,
+              "bizBotType": null,
+              "aiMediaCollectionInfo": null,
+              "expectedImageCount": null,
+              "expectedVideoCount": null,
+              "botResponseTargetId": null,
+              "botPluginType": null,
+              "botPluginReferenceIndex": null,
+              "botPluginSearchProvider": null,
+              "botPluginSearchUrl": null,
+              "botPluginSearchQuery": null,
+              "botPluginMaybeParent": false,
+              "botReelPluginThumbnailCdnUrl": null,
+              "botMessageDisclaimerText": null,
+              "botSessionTransparencyType": null,
+              "botMsgBodyType": null,
+              "botModeSelection": null,
+              "botModeOverride": null,
+              "reportingTokenInfo": {
+                "stanzaTs": 1780659717,
+                "reportingToken": {
+                  "0": 112,
+                  "1": 255,
+                  "2": 83,
+                  "3": 95,
+                  "4": 45,
+                  "5": 11,
+                  "6": 232,
+                  "7": 128,
+                  "8": 140,
+                  "9": 8,
+                  "10": 227,
+                  "11": 113,
+                  "12": 60,
+                  "13": 148,
+                  "14": 203,
+                  "15": 104
+                },
+                "version": 2,
+                "reportingTag": {
+                  "0": 1,
+                  "1": 19,
+                  "2": 208,
+                  "3": 148,
+                  "4": 219,
+                  "5": 94,
+                  "6": 76,
+                  "7": 202,
+                  "8": 0,
+                  "9": 187,
+                  "10": 62,
+                  "11": 56,
+                  "12": 249,
+                  "13": 241,
+                  "14": 133,
+                  "15": 78,
+                  "16": 80,
+                  "17": 179,
+                  "18": 189,
+                  "19": 7
+                }
+              },
+              "requiresDirectConnection": null,
+              "bizContentPlaceholderType": null,
+              "hostedBizEncStateMismatch": false,
+              "senderOrRecipientAccountTypeHosted": false,
+              "placeholderCreatedWhenAccountIsHosted": false,
+              "groupHistoryBundleMessageKey": null,
+              "groupHistoryBundleMetadata": null,
+              "groupHistoryIndividualMessageInfo": null,
+              "nonJidMentions": null,
+              "links": []
+            }
+          },
+          "engine": "WEBJS",
+          "environment": {
+            "version": "2026.2.1",
+            "engine": "WEBJS",
+            "tier": "CORE",
+            "browser": "/usr/bin/chromium",
+            "platform": "linux/x64",
+            "worker": {
+              "id": null
+            }
+          }
+        },
+        "webhookUrl": "https://n8n.the-architechie.com/webhook/Whatsapp",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "781851375bf45f9787eaf456a7b7b08ccd3eebed84d651fe142410c1c498be53"
+  }
+}
