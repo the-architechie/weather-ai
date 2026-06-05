@@ -4,7 +4,7 @@
 The idea behind this solution is to leverage the Weather AI APIs to give customers an interactive experience through WhatsApp. As such, a user does not need to log in anywhere to understand how to get weather insights or crop insights. All of that happens within WhatsApp natively.
 
 ## Architecture Diagram
-![](/Users/muchami/Desktop/Screenshot 2026-06-05 at 16.03.58.png)
+<img width="1287" height="1089" alt="Screenshot 2026-06-05 at 16 03 58" src="https://github.com/user-attachments/assets/48812c16-597f-46cf-a867-762467ffba85" />
 
 ## Tools and Technologies
 - n8n - Workflow orchestration
