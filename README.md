@@ -62,11 +62,5 @@ Weather at your location 📍
 #### Media (Tree Analysis)
   When a user sends a picture of their crop, the bot automatically downloads the binary file from the WAHA server. It then extracts the user's caption from the Webhook payload and POSTs it alongside the image to the Tree Analysis API. The user's original caption is dynamically injected back into the final response for a conversational experience.
 
-```text
-🌳 Tree Analysis complete
-_You asked: "Are these brown spots dangerous?"_
-We couldn't identify any trees clearly from the image you provided. This can happen if the photo is blurry, taken from far away, or doesn't show trees prominently.
-Tip: Try taking a clearer photo of your trees from a closer angle, and make sure the area is well-lit.
-```
 <img width="959" height="568" alt="Screenshot 2026-06-05 at 16 57 52" src="https://github.com/user-attachments/assets/4f9dcbdc-e36d-44c5-b1f7-64c3bcaf7cc8" />
 
