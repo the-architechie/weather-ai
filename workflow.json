@@ -276,7 +276,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer wai_d0201c.27741a0f8fc2f73757bc6cb4f05393aec5e6f3bbdc611b5b"
+              "value": "Secret"
             }
           ]
         },
@@ -316,7 +316,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer wai_d0201c.27741a0f8fc2f73757bc6cb4f05393aec5e6f3bbdc611b5b"
+              "value": ""
             }
           ]
         },
@@ -340,7 +340,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer wai_d0201c.27741a0f8fc2f73757bc6cb4f05393aec5e6f3bbdc611b5b"
+              "value": ""
             }
           ]
         },
@@ -1035,7 +1035,7 @@
             }
           }
         },
-        "webhookUrl": "https://n8n.the-architechie.com/webhook/Whatsapp",
+        "webhookUrl": "https://n8n.com/webhook/Whatsapp",
         "executionMode": "production"
       }
     ]
